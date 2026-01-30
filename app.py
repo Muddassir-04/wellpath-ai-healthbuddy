@@ -2,6 +2,9 @@ import streamlit as st
 from ui.login import auth_ui
 from risk_engine import HealthInput, HealthRiskEngine
 
+from database.firestore import save_health_log
+from datetime import datetime
+
 # ---------------- CONFIG ----------------
 st.set_page_config(
     page_title="WellPath – AI HealthBuddy",
@@ -75,6 +78,25 @@ if submitted:
     )
 
     result = engine.assess_risk(user_data)
+    
+    health_record = {
+         "timestamp": datetime.utcnow(),
+         "age": age,
+         "weight": weight,
+         "stress": stress,
+         "sleep": sleep,
+         "urine": urine,
+         "symptoms": symptoms,
+         "risk_level": result["risk_level"],
+         "risk_score": result["risk_score"],
+         "recommended_action": result["recommended_action"]
+     }
+
+    save_health_log(
+         st.session_state["user"],
+         health_record
+     )
+
 
     st.markdown("---")
     st.subheader("🧠 Health Assessment Result")
