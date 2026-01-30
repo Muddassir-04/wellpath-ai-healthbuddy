@@ -1,14 +1,28 @@
 import streamlit as st
+from ui.login import auth_ui
 from risk_engine import HealthInput, HealthRiskEngine
 
+# ---------------- CONFIG ----------------
 st.set_page_config(
     page_title="WellPath – AI HealthBuddy",
     page_icon="🩺",
     layout="centered"
 )
 
+# ---------------- AUTH GATE ----------------
+if "user" not in st.session_state:
+    auth_ui()
+    st.stop()   # ⛔ Stop here if not logged in
+
+# ---------------- APP UI (ONLY AFTER LOGIN) ----------------
 st.title("🩺 WellPath – AI HealthBuddy")
 st.caption("Your daily personal health assistant")
+
+st.markdown(f"👤 Logged in as **{st.session_state['user']}**")
+
+if st.button("Logout"):
+    st.session_state.clear()
+    st.rerun()
 
 st.markdown("---")
 
@@ -19,7 +33,7 @@ st.sidebar.info(
     "you on when and how to take action."
 )
 
-# Input form
+# ---------------- INPUT FORM ----------------
 st.subheader("Enter your health details")
 
 with st.form("health_form"):
@@ -47,7 +61,7 @@ with st.form("health_form"):
 
     submitted = st.form_submit_button("Assess My Health")
 
-# Risk assessment
+# ---------------- RISK ASSESSMENT ----------------
 if submitted:
     engine = HealthRiskEngine()
 
@@ -65,7 +79,6 @@ if submitted:
     st.markdown("---")
     st.subheader("🧠 Health Assessment Result")
 
-    # Risk color
     if result["risk_level"] == "LOW":
         st.success(f"🟢 Risk Level: {result['risk_level']}")
     elif result["risk_level"] == "MEDIUM":
