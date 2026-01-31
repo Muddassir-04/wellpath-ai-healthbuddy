@@ -1,9 +1,10 @@
 import streamlit as st
+import pandas as pd
+from datetime import datetime
+
 from ui.login import auth_ui
 from risk_engine import HealthInput, HealthRiskEngine
-
-from database.firestore import save_health_log
-from datetime import datetime
+from database.firestore import save_health_log, get_health_logs
 
 # ---------------- CONFIG ----------------
 st.set_page_config(
@@ -17,7 +18,7 @@ if "user" not in st.session_state:
     auth_ui()
     st.stop()   # ⛔ Stop here if not logged in
 
-# ---------------- APP UI (ONLY AFTER LOGIN) ----------------
+# ---------------- APP HEADER ----------------
 st.title("🩺 WellPath – AI HealthBuddy")
 st.caption("Your daily personal health assistant")
 
@@ -29,15 +30,55 @@ if st.button("Logout"):
 
 st.markdown("---")
 
-# Sidebar
-st.sidebar.header("About")
+# ---------------- FETCH USER HISTORY ----------------
+user_logs = get_health_logs(st.session_state["user"], limit=30)
+
+# ---------------- STEP 2: DATAFRAME ----------------
+df = None
+if user_logs:
+    df = pd.DataFrame(user_logs)
+    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    df = df.sort_values("timestamp")
+
+# ---------------- HISTORY TABLE ----------------
+st.subheader("📊 Your Health History")
+
+if df is not None:
+    st.dataframe(
+        df[[
+            "timestamp",
+            "risk_score",
+            "stress",
+            "sleep",
+            "weight"
+        ]],
+        use_container_width=True
+    )
+else:
+    st.info("No health history found yet. Start logging today!")
+    
+# ---------------- RISK SCORE CHART ----------------
+if df is not None and len(df) > 1:
+    st.subheader("📈 Risk Score Trend")
+
+    chart_df = df.set_index("timestamp")[["risk_score"]]
+    st.line_chart(chart_df)
+
+elif df is not None and len(df) == 1:
+    st.info("Add more daily logs to see trends over time.")
+
+
+st.markdown("---")
+
+# ---------------- SIDEBAR ----------------
+st.sidebar.header("About WellPath")
 st.sidebar.info(
-    "WellPath helps you monitor your health daily and guides "
-    "you on when and how to take action."
+    "WellPath helps you monitor your health daily, "
+    "track trends, and guides you on when to take action."
 )
 
 # ---------------- INPUT FORM ----------------
-st.subheader("Enter your health details")
+st.subheader("🧾 Enter Today’s Health Details")
 
 with st.form("health_form"):
     age = st.number_input("Age", min_value=1, max_value=120, value=25)
@@ -78,26 +119,27 @@ if submitted:
     )
 
     result = engine.assess_risk(user_data)
-    
+
+    # -------- SAVE TO FIRESTORE --------
     health_record = {
-         "timestamp": datetime.utcnow(),
-         "age": age,
-         "weight": weight,
-         "stress": stress,
-         "sleep": sleep,
-         "urine": urine,
-         "symptoms": symptoms,
-         "risk_level": result["risk_level"],
-         "risk_score": result["risk_score"],
-         "recommended_action": result["recommended_action"]
-     }
+        "timestamp": datetime.utcnow(),
+        "age": age,
+        "weight": weight,
+        "stress": stress,
+        "sleep": sleep,
+        "urine": urine,
+        "symptoms": symptoms,
+        "risk_level": result["risk_level"],
+        "risk_score": result["risk_score"],
+        "recommended_action": result["recommended_action"]
+    }
 
     save_health_log(
-         st.session_state["user"],
-         health_record
-     )
+        st.session_state["user"],
+        health_record
+    )
 
-
+    # -------- DISPLAY RESULT --------
     st.markdown("---")
     st.subheader("🧠 Health Assessment Result")
 
@@ -117,6 +159,5 @@ if submitted:
     st.markdown("### Recommended Action")
     st.info(result["recommended_action"])
 
-    st.caption(
-        "⚠️ This tool does not replace professional medical advice."
-    )
+    st.caption("⚠️ This tool does not replace professional medical advice.")
+
