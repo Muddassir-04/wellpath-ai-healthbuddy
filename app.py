@@ -108,6 +108,35 @@ elif df is not None:
     st.info("Add more daily logs to unlock health insights.")
 else:
     st.info("No health data available yet.")
+    
+from analysis.health_trends import compute_health_change
+
+st.subheader("📉 Health Change Summary")
+
+change_score = compute_health_change(df)
+
+if change_score is None:
+    st.info("Log more days to analyze health changes.")
+else:
+    if change_score > 0:
+        st.error(f"⚠️ Health risk increased by {change_score} points recently.")
+    elif change_score < 0:
+        st.success(f"✅ Health risk improved by {abs(change_score)} points.")
+    else:
+        st.info("➖ No significant change detected.")
+
+st.subheader("🔍 What’s affecting your risk?")
+
+if df is not None and len(df) >= 5:
+    corr = df[["risk_score", "stress", "sleep"]].corr()
+
+    stress_corr = corr.loc["risk_score", "stress"]
+    sleep_corr = corr.loc["risk_score", "sleep"]
+
+    if stress_corr > 0.4:
+        st.warning("📈 Higher stress is strongly linked to increased health risk.")
+    if sleep_corr < -0.4:
+        st.warning("💤 Better sleep is strongly linked to lower health risk.")
 
 
 st.markdown("---")
