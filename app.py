@@ -67,6 +67,48 @@ if df is not None and len(df) > 1:
 elif df is not None and len(df) == 1:
     st.info("Add more daily logs to see trends over time.")
 
+# ---------------- HEALTH INSIGHTS ----------------
+st.subheader("🧠 Health Insights")
+
+if df is not None and len(df) >= 2:
+    insights = []
+
+    # Recent values
+    recent = df.tail(3)
+
+    avg_risk = recent["risk_score"].mean()
+    avg_stress = recent["stress"].mean()
+    avg_sleep = recent["sleep"].mean()
+
+    # ---- Risk trend ----
+    if recent["risk_score"].iloc[-1] > recent["risk_score"].iloc[0]:
+        insights.append("🔴 Your health risk score is increasing recently.")
+    else:
+        insights.append("🟢 Your health risk score is stable or improving.")
+
+    # ---- Stress analysis ----
+    if avg_stress >= 7:
+        insights.append("⚠️ High stress levels detected. Consider relaxation and rest.")
+    elif avg_stress >= 5:
+        insights.append("🟡 Moderate stress levels. Try improving work-life balance.")
+    else:
+        insights.append("🟢 Stress levels look healthy.")
+
+    # ---- Sleep analysis ----
+    if avg_sleep < 6:
+        insights.append("💤 Your sleep duration is consistently low. Aim for 7–8 hours.")
+    else:
+        insights.append("🟢 Your sleep pattern is within a healthy range.")
+
+    # ---- Display insights ----
+    for insight in insights:
+        st.info(insight)
+
+elif df is not None:
+    st.info("Add more daily logs to unlock health insights.")
+else:
+    st.info("No health data available yet.")
+
 
 st.markdown("---")
 
