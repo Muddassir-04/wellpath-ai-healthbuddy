@@ -30,3 +30,13 @@ def get_health_logs(user_email, limit=30):
         data.append(record)
 
     return data
+
+def save_bulk_health_logs(user_email, logs):
+    user_ref = db.collection("users").document(user_email)
+    batch = db.batch()
+
+    for log in logs:
+        doc_ref = user_ref.collection("health_logs").document()
+        batch.set(doc_ref, log)
+
+    batch.commit()

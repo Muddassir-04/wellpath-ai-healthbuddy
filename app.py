@@ -4,7 +4,7 @@ from datetime import datetime
 
 from ui.login import auth_ui
 from risk_engine import HealthInput, HealthRiskEngine
-from database.firestore import save_health_log, get_health_logs
+from database.firestore import save_health_log, get_health_logs, save_bulk_health_logs
 
 # ---------------- CONFIG ----------------
 st.set_page_config(
@@ -56,6 +56,38 @@ if df is not None:
     )
 else:
     st.info("No health history found yet. Start logging today!")
+    
+st.subheader("🧪 Demo & Simulation")
+
+from simulation.health_simulator import generate_health_logs
+from database.firestore import save_bulk_health_logs
+
+col1, col2 = st.columns(2)
+
+with col1:
+    pattern = st.selectbox(
+        "Simulation Pattern",
+        ["worsening", "improving"]
+    )
+
+with col2:
+    days = st.slider("Number of Days", 7, 60, 30)
+
+if st.button("🚀 Generate Simulated Health Data"):
+    logs = generate_health_logs(
+        days=days,
+        base_age=25,
+        pattern=pattern
+    )
+
+    save_bulk_health_logs(
+        st.session_state["user"],
+        logs
+    )
+
+    st.success(f"✅ {days} days of simulated health data generated!")
+    st.rerun()
+
     
 # ---------------- RISK SCORE CHART ----------------
 if df is not None and len(df) > 1:
@@ -274,6 +306,16 @@ if submitted:
         st.session_state["user"],
         health_record
     )
+    
+        # -------- PERSONALIZED RECOMMENDATIONS --------
+    from recommendation.recommender import generate_recommendations
+
+    st.subheader("🧭 Personalized Recommendations")
+
+    recs = generate_recommendations(df, rule_risk_level, ml_label)
+
+    for rec in recs:
+        st.info("• " + rec)
 
     # -------- FINAL RESULT --------
     st.markdown("---")
@@ -296,3 +338,6 @@ if submitted:
     st.info(result["recommended_action"])
 
     st.caption("⚠️ This tool does not replace professional medical advice.")
+
+    
+     
