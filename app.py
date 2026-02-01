@@ -289,25 +289,37 @@ if submitted:
         st.success("Both systems agree on your risk level.")
 
     # -------- SAVE TO FIRESTORE --------
+    
+    ai_rule_disagree = rule_risk_level != ml_label
+    
     health_record = {
         "timestamp": datetime.utcnow(),
+
+        # user inputs
         "age": age,
         "weight": weight,
         "stress": stress,
         "sleep": sleep,
         "urine": urine,
         "symptoms": symptoms,
+
+        # rule-based
         "risk_level": rule_risk_level,
         "risk_score": result["risk_score"],
-        "recommended_action": result["recommended_action"]
-    }
+        "recommended_action": result["recommended_action"],
 
+        # AI-based (NEW)
+        "ml_risk_label": ml_label,
+        "ml_risk_probability": ml_prob,
+        "ai_rule_disagree": ai_rule_disagree
+    }
+        
     save_health_log(
         st.session_state["user"],
         health_record
     )
     
-        # -------- PERSONALIZED RECOMMENDATIONS --------
+    # -------- PERSONALIZED RECOMMENDATIONS --------
     from recommendation.recommender import generate_recommendations
 
     st.subheader("🧭 Personalized Recommendations")
