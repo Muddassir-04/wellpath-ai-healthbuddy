@@ -138,6 +138,31 @@ if df is not None and len(df) >= 5:
     if sleep_corr < -0.4:
         st.warning("💤 Better sleep is strongly linked to lower health risk.")
 
+st.subheader("🤖 AI Model Training")
+
+if st.button("Train Risk Prediction Model"):
+    from ml.dataset_builder import build_dataset
+    from ml.train_model import train_risk_model
+
+    if df is None or len(df) < 20:
+        st.warning("Not enough data to train ML model (need at least 20 logs).")
+    else:
+        dataset = build_dataset(user_logs)
+        accuracy = train_risk_model(dataset)
+        st.success(f"✅ Model trained successfully! Accuracy: {accuracy}%")
+        
+    st.subheader("🤖 Train AI using Medical Dataset")
+
+if st.button("Train using Public Healthcare Data"):
+    from ml.external_dataset_adapter import load_heart_dataset
+    from ml.train_external_model import train_from_external_data
+
+    X, y = load_heart_dataset("data/heart.csv")
+    acc = train_from_external_data(X, y)
+
+    st.success(f"✅ Model trained using real medical data! Accuracy: {acc}%")
+
+
 
 st.markdown("---")
 
@@ -147,6 +172,11 @@ st.sidebar.info(
     "WellPath helps you monitor your health daily, "
     "track trends, and guides you on when to take action."
 )
+st.caption(
+    "⚠️ AI predictions are probabilistic and for awareness only. "
+    "They do not replace clinical diagnosis."
+)
+
 
 # ---------------- INPUT FORM ----------------
 st.subheader("🧾 Enter Today’s Health Details")
@@ -189,7 +219,42 @@ if submitted:
         symptoms=symptoms
     )
 
+    # -------- RULE-BASED ENGINE --------
     result = engine.assess_risk(user_data)
+    rule_risk_level = result["risk_level"]
+
+    # -------- ML PREDICTION --------
+    from ml.predictor import predict_risk
+
+    cholesterol = 200  # temporary proxy
+
+    ml_prob, ml_label = predict_risk(
+        age=age,
+        cholesterol=cholesterol,
+        stress=stress,
+        sleep=sleep,
+        urine=0
+    )
+
+    # -------- DISPLAY AI RESULT --------
+    st.subheader("🤖 AI Risk Prediction (ML-Based)")
+    st.metric("ML Risk Probability", f"{ml_prob}%")
+
+    if ml_label == "HIGH":
+        st.error("🔴 AI Model predicts HIGH health risk.")
+    else:
+        st.success("🟢 AI Model predicts LOW health risk.")
+
+    # -------- COMPARISON --------
+    st.subheader("⚖️ Rule-Based vs AI-Based")
+
+    st.write(f"Rule-Based Risk: **{rule_risk_level}**")
+    st.write(f"AI-Based Risk: **{ml_label}**")
+
+    if rule_risk_level != ml_label:
+        st.warning("AI and rule-based system disagree. Monitor closely.")
+    else:
+        st.success("Both systems agree on your risk level.")
 
     # -------- SAVE TO FIRESTORE --------
     health_record = {
@@ -200,7 +265,7 @@ if submitted:
         "sleep": sleep,
         "urine": urine,
         "symptoms": symptoms,
-        "risk_level": result["risk_level"],
+        "risk_level": rule_risk_level,
         "risk_score": result["risk_score"],
         "recommended_action": result["recommended_action"]
     }
@@ -210,16 +275,16 @@ if submitted:
         health_record
     )
 
-    # -------- DISPLAY RESULT --------
+    # -------- FINAL RESULT --------
     st.markdown("---")
     st.subheader("🧠 Health Assessment Result")
 
-    if result["risk_level"] == "LOW":
-        st.success(f"🟢 Risk Level: {result['risk_level']}")
-    elif result["risk_level"] == "MEDIUM":
-        st.warning(f"🟡 Risk Level: {result['risk_level']}")
+    if rule_risk_level == "LOW":
+        st.success(f"🟢 Risk Level: {rule_risk_level}")
+    elif rule_risk_level == "MEDIUM":
+        st.warning(f"🟡 Risk Level: {rule_risk_level}")
     else:
-        st.error(f"🔴 Risk Level: {result['risk_level']}")
+        st.error(f"🔴 Risk Level: {rule_risk_level}")
 
     st.metric("Risk Score", f"{result['risk_score']} / 100")
 
@@ -231,4 +296,3 @@ if submitted:
     st.info(result["recommended_action"])
 
     st.caption("⚠️ This tool does not replace professional medical advice.")
-
