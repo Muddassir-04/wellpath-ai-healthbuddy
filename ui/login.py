@@ -1,5 +1,5 @@
 import streamlit as st
-from firebase_auth import login, signup
+from auth.firebase_auth import login, signup
 
 def auth_ui():
     st.title("🔐 Login to WellPath")
