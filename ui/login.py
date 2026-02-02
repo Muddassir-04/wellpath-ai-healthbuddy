@@ -1,30 +1,26 @@
 import streamlit as st
-from auth.firebase_auth import signup, login
+from firebase_auth import login, signup
 
 def auth_ui():
     st.title("🔐 Login to WellPath")
 
-    menu = ["Login", "Sign Up"]
-    choice = st.selectbox("Select option", menu)
+    tab1, tab2 = st.tabs(["Login", "Sign Up"])
 
-    email = st.text_input("Email")
-    password = st.text_input("Password", type="password")
+    with tab1:
+        email = st.text_input("Email", key="login_email")
+        password = st.text_input("Password", type="password", key="login_pass")
 
-    error_placeholder = st.empty()
-
-    if choice == "Sign Up":
-        if st.button("Create Account"):
-            try:
-                signup(email, password)
-                st.success("Account created successfully. Please login.")
-            except Exception as e:
-                error_placeholder.error("Signup failed. Try a stronger password.")
-
-    if choice == "Login":
         if st.button("Login"):
-            try:
-                user = login(email, password)
-                st.session_state["user"] = user["email"]
-                st.rerun()  # 🔥 immediate redirect
-            except Exception:
-                error_placeholder.error("Invalid credentials. Please try again.")
+            if login(email, password):
+                st.success("Logged in successfully")
+                st.rerun()
+            else:
+                st.error("Invalid credentials")
+
+    with tab2:
+        email = st.text_input("Email", key="signup_email")
+        password = st.text_input("Password", type="password", key="signup_pass")
+
+        if st.button("Create Account"):
+            signup(email, password)
+            st.success("Account created! Please login.")
